@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>먼지킬러 직원</title>
+</head>
+<body>
+    <h1>먼지킬러 직원:</h1>
+    <button onclick="history.back()">돌아가기</button>
+</body>
+</html>
+<style>
+body {
+    color: blue;
+    text-align: center;
+}
+button {
+    padding: 10px;
+    font-size: 16px;
+}
+</style>
