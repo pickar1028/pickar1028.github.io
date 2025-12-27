@@ -31,3 +31,19 @@ body {
 }
 </style>
 <img src="picture1.png" alt="직원 동물화"width="300" height="200">
+<audio id="bgm" src="bgm.mp3" autoplay loop muted></audio>
+<script>
+  const bgm = document.getElementById("bgm");
+
+  function enableSound() {
+    bgm.muted = false;
+    bgm.volume = 0.3;
+    bgm.play();
+    document.removeEventListener("click", enableSound);
+    document.removeEventListener("keydown", enableSound);
+  }
+
+  document.addEventListener("click", enableSound);
+  document.addEventListener("keydown", enableSound);
+</script>
+
