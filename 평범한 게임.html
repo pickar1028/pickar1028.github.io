@@ -87,7 +87,7 @@ function shake(){if(gameOver) return;
   let i=0; const s=setInterval(()=>{game.style.transform=`translate(${Math.random()*10-5}px,${Math.random()*10-5}px)`; i++; if(i>10){clearInterval(s); game.style.transform='translate(0,0)'}},30);
 }
 
-// 공격 버튼
+// 공격 함수
 function attack(){if(gameOver) return;
   atkSound.currentTime=0; atkSound.play();
   [...mobs,...bosses].forEach(e=>{
@@ -103,9 +103,13 @@ function attack(){if(gameOver) return;
   });
   if(kill>=10 && bosses.length===0 && bossLevel<3){ kill=0; spawnBoss(); }
 }
-document.getElementById('attackBtn').onclick=attack;
 
-// 몬스터 붙으면 2초마다 공격
+// PC 클릭 + 모바일 터치
+const atkBtn=document.getElementById('attackBtn');
+atkBtn.onclick=attack;
+atkBtn.addEventListener('touchstart',e=>{ e.preventDefault(); attack(); });
+
+// 몬스터 2초마다 플레이어 공격
 setInterval(()=>{
   if(gameOver) return;
   const t=Date.now();
@@ -115,7 +119,7 @@ setInterval(()=>{
   });
 },2000);
 
-// 보스 붙으면 2초마다 공격 + 5초마다 흔들림 + 1.3배 데미지
+// 보스 공격 및 흔들림
 setInterval(()=>{
   if(gameOver) return;
   const t=Date.now();
@@ -132,7 +136,7 @@ function endGame(){ if(gameOver) return;
   setTimeout(()=>location.reload(),3000);
 }
 
-// 루프
+// 게임 루프
 function loop(){
   if(gameOver) return;
   let vx=(keys['d']?1:0)-(keys['a']?1:0);
