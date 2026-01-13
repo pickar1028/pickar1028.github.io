@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Monster Battle Game</title>
+<style>
+html,body{margin:0;padding:0;overflow:hidden;font-family:Arial}
+#game{position:relative;width:100vw;height:100vh;background:#3fa93f;transition:transform 0.05s}
+.player{position:absolute;width:128px;height:128px;background:url('player.png') no-repeat center/contain;transform-origin:center center;z-index:5}
+.mob,.boss{position:absolute;background-size:contain;background-repeat:no-repeat}
+.mob{width:192px;height:192px;background-image:url('mob.png')}
+.boss{width:384px;height:384px;z-index:4}
+.hpbar{position:absolute;height:8px;background:red;top:-12px;left:0}
+#ui{position:fixed;top:10px;left:10px;color:#fff;font-size:18px;z-index:10}
+#attackBtn{position:fixed;bottom:20px;right:20px;padding:20px;font-size:20px;z-index:10}
+#overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;font-size:60px;color:#fff;background:rgba(0,0,0,0.8);z-index:20}
+#dpad{position:fixed;bottom:20px;left:20px;width:140px;height:140px;z-index:10}
+.dbtn{position:absolute;width:45px;height:45px;background:rgba(0,0,0,0.5);color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;border-radius:10px;user-select:none}
+#up{top:0;left:47px} #down{bottom:0;left:47px} #left{left:0;top:47px} #right{right:0;top:47px}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="ui">HP: <span id="php">100</span></div>
+<button id="attackBtn">ATTACK</button>
+<div id="overlay"></div>
+<div id="dpad">
+ <div class="dbtn" id="up">▲</div>
+ <div class="dbtn" id="down">▼</div>
+ <div class="dbtn" id="left">◀</div>
+ <div class="dbtn" id="right">▶</div>
+</div>
+<audio id="atkSound" src="attack.mp3"></audio>
+
+<script>
+const game=document.getElementById('game');
+const overlay=document.getElementById('overlay');
+const atkSound=document.getElementById('atkSound');
+let keys={},mobs=[],bosses=[],kill=0,bossLevel=0,gameOver=false;
+
+// 플레이어
+const player={x:innerWidth/2,y:innerHeight/2,speed:8,hp:100,atk:2,el:null,angle:0};
+player.el=document.createElement('div');
+player.el.className='player';
+player.el.style.left=player.x+'px';
+player.el.style.top=player.y+'px';
+game.appendChild(player.el);
+
+// 키 입력
+addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+function bindBtn(id,key){
+  const b=document.getElementById(id);
+  b.addEventListener('touchstart',e=>{e.preventDefault();keys[key]=true});
+  b.addEventListener('touchend',e=>{e.preventDefault();keys[key]=false});
+  b.addEventListener('touchcancel',()=>keys[key]=false);
+}
+bindBtn('up','w'); bindBtn('down','s'); bindBtn('left','a'); bindBtn('right','d');
+
+// 몬스터 생성
+function spawnMob(){
+  if(gameOver) return;
+  const m=document.createElement('div'); m.className='mob';
+  m.hp=5; m.atk=3; m.lastAtk=0;
+  m.x=Math.random()*(innerWidth-192); m.y=Math.random()*(innerHeight-192);
+  m.hpbar=document.createElement('div'); m.hpbar.className='hpbar'; m.appendChild(m.hpbar);
+  m.style.left=m.x+'px'; m.style.top=m.y+'px';
+  game.appendChild(m); mobs.push(m);
+  setTimeout(()=>{if(game.contains(m)){m.remove(); mobs=mobs.filter(x=>x!==m)}},20000);
+}
+
+// 보스 생성
+function spawnBoss(){
+  bossLevel++;
+  const b=document.createElement('div'); b.className='boss';
+  b.style.backgroundImage=`url(boss${bossLevel}.png)`;
+  b.hp=[10,15,30][bossLevel-1]; b.atk=[5,7,10][bossLevel-1];
+  b.lastAtk=0; b.lastShake=0;
+  b.x=Math.random()*(innerWidth-384); b.y=Math.random()*(innerHeight-384);
+  b.hpbar=document.createElement('div'); b.hpbar.className='hpbar'; b.appendChild(b.hpbar);
+  b.style.left=b.x+'px'; b.style.top=b.y+'px';
+  game.appendChild(b); bosses.push(b);
+}
+
+// 화면 흔들기
+function shake(){if(gameOver) return;
+  let i=0; const s=setInterval(()=>{game.style.transform=`translate(${Math.random()*10-5}px,${Math.random()*10-5}px)`; i++; if(i>10){clearInterval(s); game.style.transform='translate(0,0)'}},30);
+}
+
+// 공격 버튼
+function attack(){if(gameOver) return;
+  atkSound.currentTime=0; atkSound.play();
+  [...mobs,...bosses].forEach(e=>{
+    const d=Math.hypot(e.x-player.x,e.y-player.y);
+    if(d<160){ e.hp-=player.atk; if(e.hp<=0){
+      if(e.className==='mob'){ kill++; mobs=mobs.filter(x=>x!==e) }
+      else{
+        bosses=bosses.filter(x=>x!==e);
+        if(bossLevel===3){ gameOver=true; overlay.innerText='YOU WON'; overlay.style.display='flex'; setTimeout(()=>location.href='index',3000) }
+      }
+      e.remove();
+    }}
+  });
+  if(kill>=10 && bosses.length===0 && bossLevel<3){ kill=0; spawnBoss(); }
+}
+document.getElementById('attackBtn').onclick=attack;
+
+// 몬스터 붙으면 2초마다 공격
+setInterval(()=>{
+  if(gameOver) return;
+  const t=Date.now();
+  mobs.forEach(m=>{
+    const dist=Math.hypot(player.x-m.x,player.y-m.y);
+    if(dist<120 && t-m.lastAtk>2000){ player.hp-=3; m.lastAtk=t; }
+  });
+},2000);
+
+// 보스 붙으면 2초마다 공격 + 5초마다 흔들림 + 1.3배 데미지
+setInterval(()=>{
+  if(gameOver) return;
+  const t=Date.now();
+  bosses.forEach(b=>{
+    const dist=Math.hypot(player.x-b.x,player.y-b.y);
+    if(dist<220 && t-b.lastAtk>2000){ player.hp-=b.atk; b.lastAtk=t; }
+    if(t-b.lastShake>5000){ player.hp-=b.atk*1.3; b.lastShake=t; shake(); }
+  });
+},1000);
+
+// 게임 종료 처리
+function endGame(){ if(gameOver) return;
+  gameOver=true; overlay.innerText='GAME OVER'; overlay.style.display='flex';
+  setTimeout(()=>location.reload(),3000);
+}
+
+// 루프
+function loop(){
+  if(gameOver) return;
+  let vx=(keys['d']?1:0)-(keys['a']?1:0);
+  let vy=(keys['s']?1:0)-(keys['w']?1:0);
+  if(vx||vy){ player.angle=Math.atan2(vy,vx); player.x+=vx*player.speed; player.y+=vy*player.speed; }
+  player.el.style.left=player.x+'px'; player.el.style.top=player.y+'px'; player.el.style.transform=`rotate(${player.angle}rad)`;
+
+  mobs.forEach(m=>{
+    const dx=player.x-m.x, dy=player.y-m.y, dist=Math.hypot(dx,dy);
+    if(dist!==0){ m.x+=dx/dist*5; m.y+=dy/dist*5; }
+    m.style.left=m.x+'px'; m.style.top=m.y+'px'; m.hpbar.style.width=`${Math.max(0,(m.hp/5)*192)}px`;
+  });
+
+  bosses.forEach(b=>{
+    const dx=player.x-b.x, dy=player.y-b.y, dist=Math.hypot(dx,dy);
+    if(dist!==0){ b.x+=dx/dist*3; b.y+=dy/dist*3; }
+    b.style.left=b.x+'px'; b.style.top=b.y+'px'; b.hpbar.style.width=`${Math.max(0,(b.hp/30)*384)}px`;
+  });
+
+  document.getElementById('php').innerText=Math.max(0,Math.floor(player.hp));
+  if(player.hp<=0 && !gameOver) endGame();
+  requestAnimationFrame(loop);
+}
+
+// 몬스터 2초마다 스폰
+setInterval(spawnMob,2000);
+loop();
+
+</script>
+</body>
+</html>
