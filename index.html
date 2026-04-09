@@ -45,3 +45,20 @@ button {
     먼지 킬! 게임 하러가기
 </button>
 
+<script>
+let input = "";
+const target = "munger";
+
+window.addEventListener("keydown", (e) => {
+  input += e.key.toLowerCase();
+
+  if (input.length > target.length) {
+    input = input.slice(-target.length);
+  }
+
+  if (input === target) {
+    window.location.href = "ester1.html";
+  }
+});
+</script>
+
